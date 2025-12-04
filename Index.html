@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Productivity Tracker with ID</title>
+<style>
+:root{
+  --bg:#0a0a0a;--card:#131313;--muted:#bdbdbd;--accent:#7fdcff;
+  --danger:#ff8c8c;--glass: rgba(255,255,255,0.03);--text:#E8E8E8;
+}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg) url('https://www.transparenttextures.com/patterns/asfalt-dark.png');background-size:320px;color:var(--text);padding:18px;}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:18px;flex-wrap:wrap;cursor:pointer}
+.brand h1{margin:0;font-size:20px;color:var(--accent)}
+.subtitle{font-size:12px;color:var(--muted);margin-top:4px}
+.user-mini{display:flex;align-items:center;gap:10px}
+.mini-pfp{width:40px;height:40px;border-radius:50%;object-fit:cover;display:none}
+.mini-name{font-weight:600}
+.mini-goal{font-size:12px;color:var(--muted)}
+.container{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+@media(max-width:900px){.container{grid-template-columns:1fr;padding-bottom:80px}}
+.card{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(127,220,255,0.06);box-shadow: 0 6px 18px rgba(0,0,0,0.6);}
+.input{width:100%;padding:10px;border-radius:8px;border:none;background:#1f1f1f;color:var(--text);margin-top:8px}
+.label{font-size:13px;color:var(--muted);margin-top:6px;display:block}
+.row{display:flex;gap:12px;align-items:center}
+.space{justify-content:space-between}
+.small{font-size:12px}
+.muted{color:var(--muted)}
+.btn{padding:10px 12px;border-radius:9px;border:none;background:var(--glass);color:var(--text);cursor:pointer;transition:transform .12s ease, box-shadow .12s ease;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(127,220,255,0.06)}
+.btn.primary{background:linear-gradient(90deg,var(--accent), #6cc4e6);color:#000;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04)}
+.btn.danger{background:linear-gradient(90deg,var(--danger), #ff7b7b);color:#000}
+.activity-list{list-style:none;padding:0;margin:12px 0;max-height:320px;overflow:auto}
+.activity-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(127,220,255,0.04);margin-bottom:8px;}
+.activity-item .meta{font-size:14px}
+.activity-item .meta small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.total{display:flex;justify-content:space-between;align-items:center;padding-top:10px}
+.big{font-size:20px;font-weight:700}
+.accent{color:var(--accent)}
+.time{font-family:monospace;font-size:18px}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60;background:rgba(0,0,0,0.8);}
+.modal[aria-hidden="true"]{display:none}
+.modal-panel{width:360px;padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(127,220,255,0.06)}
+.divider{height:1px;background:rgba(255,255,255,0.03);margin:12px 0}
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <div class="brand">
+    <h1>Productivity Tracker</h1>
+    <div class="subtitle">Track productive hours • built for vibe coding</div>
+  </div>
+  <div class="user-mini">
+    <div class="mini-info">
+      <div id="miniName" class="mini-name">Guest</div>
+      <div id="miniGoal" class="mini-goal"></div>
+    </div>
+    <img id="miniPfp" class="mini-pfp" alt="profile" />
+  </div>
+</header>
+
+<main class="container">
+<section class="left">
+  <div class="card input-card">
+    <label class="label">Activity name</label>
+    <input id="activityName" class="input" placeholder="e.g. Study / Code / Gym" />
+    <div class="row">
+      <div style="flex:1">
+        <label class="label">Hours</label>
+        <input id="hours" type="number" min="0" class="input" placeholder="0" />
+      </div>
+      <div style="width:12px"></div>
+      <div style="flex:1">
+        <label class="label">Minutes</label>
+        <input id="minutes" type="number" min="0" max="59" class="input" placeholder="0" />
+      </div>
+    </div>
+    <button id="addBtn" class="btn primary">Add Activity</button>
+  </div>
+
+  <div class="card activities-card">
+    <div class="card-head">
+      <h2>Activities</h2>
+      <div class="row space">
+        <button id="clearTodayBtn" class="btn ghost">Clear Today</button>
+        <button id="exportBtn" class="btn ghost">Export JSON</button>
+      </div>
+    </div>
+    <ul id="activityList" class="activity-list" aria-live="polite"></ul>
+    <div class="total">
+      <div>Total productive time</div>
+      <div id="totalHours" class="big">0h 0m</div>
+    </div>
+  </div>
+</section>
+
+<aside class="right">
+  <div class="card profile-card">
+    <div class="row space">
+      <div>
+        <div class="muted">Streak</div>
+        <div id="streak" class="big accent">0</div>
+        <div class="muted small">days in a row</div>
+      </div>
+      <div>
+        <div class="muted">Last Reset</div>
+        <div id="lastReset" class="small">--</div>
+        <div class="muted small">Reset occurs after 12:00 PM</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row">
+      <div>
+        <div class="muted">Real time</div>
+        <div id="realTime" class="time">--:--:--</div>
+      </div>
+      <div style="text-align:right;">
+        <button id="openSettings" class="btn">Settings</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row" style="margin-top:10px;">
+      <button id="resetStreakBtn" class="btn danger ghost">Reset streak</button>
+      <button id="clearAllBtn" class="btn danger">Clear all</button>
+    </div>
+  </div>
+</aside>
+</main>
+
+<div id="settingsModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <h2>Settings / Create ID</h2>
+    <label class="label">User ID (required)</label>
+    <input id="userID" class="input" placeholder="Enter unique ID" />
+    <label class="label">Your name</label>
+    <input id="userName" class="input" placeholder="Enter your name" />
+    <label class="label">Goal (optional)</label>
+    <input id="userGoal" class="input" placeholder="e.g. 4 productive hours / day" />
+    <label class="label">Profile picture</label>
+    <input id="pfpInput" type="file" accept="image/*" class="input" />
+    <div class="row" style="margin-top:12px;">
+      <button id="saveSettingsBtn" class="btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const el=id=>document.getElementById(id);
+
+let user={id:null,name:"",goal:"",pfp:""};
+let activities=[],streak=0,lastReset=null;
+
+const miniName=el("miniName"),miniGoal=el("miniGoal"),miniPfp=el("miniPfp");
+const activityList=el("activityList"),totalHoursEl=el("totalHours");
+const streakEl=el("streak"),lastResetEl=el("lastReset"),realTimeEl=el("realTime");
+
+function storageKey(key){return `pt_${user.id}_${key}`;}
+
+function saveUserData(){
+  if(!user.id) return;
+  localStorage.setItem(storageKey("user"),JSON.stringify(user));
+  localStorage.setItem(storageKey("activities"),JSON.stringify(activities));
+  localStorage.setItem(storageKey("streak"),streak);
+  if(lastReset)localStorage.setItem(storageKey("lastReset"),lastReset);
+  localStorage.setItem("pt_lastID",user.id);
+}
+
+function loadUserData(){
+  if(!user.id) return;
+  const u=localStorage.getItem(storageKey("user"));
+  if(u) user=JSON.parse(u);
+  activities=JSON.parse(localStorage.getItem(storageKey("activities")||"[]"));
+  streak=parseInt(localStorage.getItem(storageKey("streak")||"0"),10)||0;
+  lastReset=localStorage.getItem(storageKey("lastReset"))||null;
+}
+
+function renderUI(){
+  miniName.textContent=user.name||"Guest";
+  if(user.id) miniName.textContent+=` (#${user.id})`;
+  miniGoal.textContent=user.goal||"";
+  if(user.pfp){miniPfp.src=user.pfp;miniPfp.style.display="block";} else miniPfp.style.display="none";
+
+  activityList.innerHTML="";
+  activities.forEach(a=>{
+    const li=document.createElement("li");li.className="activity-item";
+    const left=document.createElement("div");left.className="meta";
+    left.innerHTML=`<strong>${a.name}</strong><small>${a.hrs}h ${a.mins}m • ${new Date(a.createdAt).toLocaleString()}</small>`;
+    const right=document.createElement("div");const del=document.createElement("button");del.className="btn ghost";del.textContent="Delete";
+    del.onclick=()=>{activities=activities.filter(x=>x.id!==a.id);saveUserData();renderUI();}
+    right.appendChild(del);li.appendChild(left);li.appendChild(right);
+    activityList.appendChild(li);
+  });
+
+  const totalM=activities.reduce((s,a)=>s+a.hrs*60+a.mins,0);
+  totalHoursEl.textContent=`${Math.floor(totalM/60)}h ${totalM%60}m`;
+  streakEl.textContent=streak;
+  lastResetEl.textContent=lastReset||"--";
+  saveUserData();
+}
+
+function addActivity(){
+  if(!user.id){openSettings();alert("Please create an ID first!");return;}
+  const name=el("activityName").value.trim();
+  const h=parseInt(el("hours").value||"0",10);
+  const m=parseInt(el("minutes").value||"0",10);
+  if(!name){alert("Enter activity!");return;}
+  activities.push({id:Date.now(),name,hrs:h,mins:m,createdAt:new Date().toISOString()});
+  el("activityName").value="";el("hours").value="";el("minutes").value="";
+  saveUserData();renderUI();
+}
+
+function tickClock(){realTimeEl.textContent=new Date().toLocaleTimeString();}
+
+function openSettings(){el("settingsModal").setAttribute("aria-hidden","false");el("userID").value=user.id||"";el("userName").value=user.name||"";el("userGoal").value=user.goal||"";}
+function closeSettings(){el("settingsModal").setAttribute("aria-hidden","true");}
+
+function saveSettings(){
+  const id=el("userID").value.trim();
+  const name=el("userName").value.trim();
+  const goal=el("userGoal").value.trim();
+  const file=el("pfpInput").files[0];
+  if(!id){alert("ID required!");return;}
+  user.id=id;user.name=name;user.goal=goal;
+  if(file){
+    const r=new FileReader();
+    r.onload=e=>{user.pfp=e.target.result;loadUserData();renderUI();closeSettings();}
+    r.readAsDataURL(file);
+  } else {loadUserData();renderUI();closeSettings();}
+  saveUserData(); // Remember the ID for next time
+}
+
+function resetStreak(){if(confirm("Reset streak?")){streak=0;saveUserData();renderUI();}}
+function clearAll(){if(confirm("Clear all activities for this user?")){activities=[];streak=0;saveUserData();renderUI();}}
+function clearToday(){activities=[];saveUserData();renderUI();}
+function exportJSON(){const d={user,activities,streak,lastReset};const b=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`${user.id}_backup.json`;document.body.appendChild(a);a.click();a.remove();}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  tickClock();setInterval(tickClock,1000);
+  el("addBtn").onclick=addActivity;
+  el("clearAllBtn").onclick=clearAll;
+  el("clearTodayBtn").onclick=clearToday;
+  el("exportBtn").onclick=exportJSON;
+  el("openSettings").onclick=openSettings;
+  el("saveSettingsBtn").onclick=saveSettings;
+  el("resetStreakBtn").onclick=resetStreak;
+
+  const savedId=localStorage.getItem("pt_lastID");
+  if(savedId){user.id=savedId;loadUserData();}
+  if(!user.id){openSettings();}
+  renderUI();
+});
+</script>
+
+</body>
+</html>
